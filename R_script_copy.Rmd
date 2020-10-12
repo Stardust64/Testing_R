@@ -1,0 +1,145 @@
+---
+title: "G2P_Code_Reproducibility"
+author: "Kayla Barton"
+date: "`r Sys.Date()`"
+show_toc: true
+output:
+  knitr:::html_vignette:
+    toc: yes
+    fig_width: 4 
+    fig_height: 3.5
+vignette: >
+  %\VignetteIndexEntry{Week 9: Population Structure}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 1. What is R Markdown?
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. 
+
+
+## 2. Analyzing count data
+
+### a) Prepare libraries and get dataset
+Load needed libraries
+
+```{r}
+library(edgeR)
+library(gplots)
+```
+
+Read in counts file from github!  If you want to do this with your own files on github make sure to get the url from the raw file. (click 'view raw' on desired file in github, the url should say https://raw.github instead of https://github)
+```{r}
+raw_count_data <- read.csv("https://raw.githubusercontent.com/Stardust64/G2P_Code_Reproducibility/main/counts_all_samples.csv")
+
+```
+
+### c) Check and fix matrix
+
+Check column labels to make sure they are correct, then check first row to make sure it looks okay. (There should be 17 columns in total: V1, alb_dex_rep1_511_counts, alb_dex_rep2_515_counts, alb_dex_rep3_519_counts, alb_dex_rep4_523_counts, alb_rep1_510_counts, alb_rep2_514_counts, alb_rep3_518_counts, alb_rep4_522_counts, dex_rep1_509_counts, dex_rep2_513_counts, dex_rep3_517_counts, dex_rep4_521_counts, untreated_rep1_508_counts, untreated_rep2_512_counts, untreated_rep3_516_counts, and untreated_rep4_520_counts) 
+```{r}
+#Column check
+names(raw_count_data)
+
+#Row check
+raw_count_data[1,]
+```
+
+
+Construct a new matrix so that geneIDs are used as row labels, then check row again to see if it worked. 
+```{r}
+count_data <- raw_count_data[, 2:17]
+rownames(count_data) <- raw_count_data[,1]
+count_data[1,]
+```
+
+### d) Boxplot of counts
+
+Now let's make a Boxplot! (Added 1 to all filtered counts to avoid log2(0))
+```{r}
+boxplot(log2(count_data+1),ylab="log2(Counts)",main="Filtered RNA-Seq Counts")
+```
+
+Whats wrong with this boxplot? 
+
+
+Lets clean it up a bit by filtering out lowly expressed genes!  
+
+### e) Make DGEList and Filter out Lowly Expressed Genes
+
+Create Differential Gene Expression (DGE) List using filtered counts. 
+```{r}
+DGE <- DGEList(counts = count_data, genes = row.names(count_data))
+```
+
+Filter out lowly expressed genes
+```{r}
+keep <-rowSums(cpm(DGE)>=1) >=4
+DGE<-DGE[keep,]
+```
+
+Normalize data by read depth per sample
+```{r}
+DGE <- calcNormFactors(DGE)
+DGE 
+```
+
+
+### f) Boxplot of counts After Filtering Lowly Expressed Genes
+
+Create new boxplot with cleaned dataset! 
+```{r}
+boxplot(log2(cpm(DGE)+1),ylab="log2(cpm)",main="Filtered RNA-Seq Counts")
+```
+
+This looks much better! Now lets pretend that this is the figure we want to help someone recreate in Colab.  
+
+## 3.Optional task 
+
+### Try it with your own data!  
+
+Enter in your data (Dont forget to get rid of '#')
+```{r}
+#raw_my_count_data <- read.csv("name_of_my_count_data.csv") 
+```
+
+Change the number of columns to fit your dataset (Change 17 to whatever your # of columns is)
+```{r}
+#my_count_data <- raw_my_count_data[, 2:17]
+#rownames(my_count_data) <- raw_my_count_data[,1]
+#my_count_data[1,]
+```
+
+Boxplot of raw counts
+```{r}
+#boxplot(log2(my_count_data+1),ylab="log2(Counts)",main="Filtered RNA-Seq Counts")
+```
+
+DGE list to filter out lowly expressed genes
+```{r}
+#my_DGE <- DGEList(counts = my_count_data, genes = row.names(my_count_data))
+
+#keep <-rowSums(cpm(my_DGE)>=1) >=4
+#my_DGE <-my_DGE[keep,]
+
+#my_DGE <- calcNormFactors(my_DGE)
+#my_DGE 
+```
+
+
+Boxplot of counts after filtering lowly expressed genes
+
+```{r}
+#boxplot(log2(cpm(my_DGE)+1),ylab="log2(cpm)",main="Filtered RNA-Seq Counts")
+
+```
+
+
+
